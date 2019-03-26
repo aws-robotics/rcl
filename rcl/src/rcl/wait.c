@@ -506,6 +506,7 @@ rcl_wait_set_add_event(
 {
   SET_ADD(event)
   SET_ADD_RMW(event, rmw_events.events, rmw_events.event_count)
+  wait_set->impl->rmw_events.events[current_index] = rmw_handle;
   return RCL_RET_OK;
 }
 
