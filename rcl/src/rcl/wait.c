@@ -145,6 +145,8 @@ rcl_wait_set_init(
   wait_set->impl->rmw_clients.client_count = 0;
   wait_set->impl->rmw_services.services = NULL;
   wait_set->impl->rmw_services.service_count = 0;
+  wait_set->impl->rmw_events.events = NULL;
+  wait_set->impl->rmw_events.event_count = 0;
 
   size_t num_conditions =
     (2 * number_of_subscriptions) +
@@ -664,6 +666,14 @@ rcl_wait(rcl_wait_set_t * wait_set, int64_t timeout)
     RCUTILS_LOG_DEBUG_EXPRESSION_NAMED(is_ready, ROS_PACKAGE_NAME, "Service in wait set is ready");
     if (!is_ready) {
       wait_set->services[i] = NULL;
+    }
+  }
+  // Set corresponding rcl event handles NULL.
+  for (i = 0; i < wait_set->size_of_events; ++i) {
+    bool is_ready = wait_set->impl->rmw_events.events[i] != NULL;
+    RCUTILS_LOG_DEBUG_EXPRESSION_NAMED(is_ready, ROS_PACKAGE_NAME, "Event in wait set is ready");
+    if (!is_ready) {
+      wait_set->events[i] = NULL;
     }
   }
 
