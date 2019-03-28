@@ -40,6 +40,9 @@ typedef enum rcl_subscription_event_type_t
   RCL_SUBSCRIPTION_LIVELINESS_CHANGED
 } rcl_subscription_event_type_t;
 
+/// rmw struct.
+typedef struct rmw_event_t rmw_event_t;
+
 /// Internal rcl implementation struct.
 struct rcl_event_impl_t;
 
@@ -66,8 +69,7 @@ rcl_ret_t
 rcl_publisher_event_init(
   rcl_event_t * event,
   const rcl_publisher_t * publisher,
-  const rcl_publisher_event_type_t event_type,
-  const rcl_allocator_t * allocator);
+  const rcl_publisher_event_type_t event_type);
 
 RCL_PUBLIC
 RCL_WARN_UNUSED
@@ -75,8 +77,7 @@ rcl_ret_t
 rcl_subscription_event_init(
   rcl_event_t * event,
   const rcl_subscription_t * subscription,
-  const rcl_subscription_event_type_t event_type,
-  const rcl_allocator_t * allocator);
+  const rcl_subscription_event_type_t event_type);
 
 RCL_PUBLIC
 RCL_WARN_UNUSED

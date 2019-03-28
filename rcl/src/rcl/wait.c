@@ -29,6 +29,7 @@ extern "C"
 #include "rcutils/logging_macros.h"
 #include "rmw/error_handling.h"
 #include "rmw/rmw.h"
+#include "rmw/event.h"
 
 #include "./context_impl.h"
 

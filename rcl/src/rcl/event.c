@@ -27,6 +27,7 @@ extern "C"
 #include "rcutils/logging_macros.h"
 #include "rmw/error_handling.h"
 #include "rmw/validate_full_topic_name.h"
+#include "rmw/event.h"
 
 #include "./common.h"
 #include "./publisher_impl.h"
@@ -35,7 +36,8 @@ extern "C"
 
 typedef struct rcl_event_impl_t
 {
-  rmw_event_t * rmw_handle;
+  rmw_event_t rmw_handle;
+  rcl_allocator_t allocator;
 } rcl_event_impl_t;
 
 
@@ -50,12 +52,13 @@ rcl_ret_t
 rcl_publisher_event_init(
   rcl_event_t * event,
   const rcl_publisher_t * publisher,
-  const rcl_publisher_event_type_t event_type,
-  const rcl_allocator_t * allocator)
+  const rcl_publisher_event_type_t event_type)
 {
   rcl_ret_t ret = RCL_RET_OK;
 
-  // Check allocator first, so allocator can be used with errors.
+  // Check publisher and allocator first, so allocator can be used with errors.
+  RCL_CHECK_ARGUMENT_FOR_NULL(publisher, RCL_RET_INVALID_ARGUMENT);
+  rcl_allocator_t * allocator = &publisher->impl->options.allocator;
   RCL_CHECK_ALLOCATOR_WITH_MSG(allocator, "invalid allocator", return RCL_RET_INVALID_ARGUMENT);
 
   // Allocate space for the implementation struct.
@@ -63,6 +66,9 @@ rcl_publisher_event_init(
     sizeof(rcl_event_impl_t), allocator->state);
   RCL_CHECK_FOR_NULL_WITH_MSG(
     event->impl, "allocating memory failed", ret = RCL_RET_BAD_ALLOC; return ret);
+
+  event->impl->rmw_handle = rmw_get_zero_initialized_event();
+  event->impl->allocator = *allocator;
 
   rmw_event_type_t rmw_event_type = RMW_EVENT_INVALID;
   switch (event_type) {
@@ -76,21 +82,21 @@ rcl_publisher_event_init(
       return RCL_RET_INVALID_ARGUMENT;
   }
 
-  event->impl->rmw_handle = rmw_create_publisher_event(publisher->impl->rmw_handle, rmw_event_type);
-
-  return ret;
+  return rmw_publisher_event_init(&event->impl->rmw_handle,
+    publisher->impl->rmw_handle, rmw_event_type);
 }
 
 rcl_ret_t
 rcl_subscription_event_init(
   rcl_event_t * event,
   const rcl_subscription_t * subscription,
-  const rcl_subscription_event_type_t event_type,
-  const rcl_allocator_t * allocator)
+  const rcl_subscription_event_type_t event_type)
 {
   rcl_ret_t ret = RCL_RET_OK;
 
-  // Check allocator first, so allocator can be used with errors.
+  // Check subscription and allocator first, so allocator can be used with errors.
+  RCL_CHECK_ARGUMENT_FOR_NULL(subscription, RCL_RET_INVALID_ARGUMENT);
+  rcl_allocator_t * allocator = &subscription->impl->options.allocator;
   RCL_CHECK_ALLOCATOR_WITH_MSG(allocator, "invalid allocator", return RCL_RET_INVALID_ARGUMENT);
 
   // Allocate space for the implementation struct.
@@ -98,6 +104,9 @@ rcl_subscription_event_init(
     sizeof(rcl_event_impl_t), allocator->state);
   RCL_CHECK_FOR_NULL_WITH_MSG(
     event->impl, "allocating memory failed", ret = RCL_RET_BAD_ALLOC; return ret);
+
+  event->impl->rmw_handle = rmw_get_zero_initialized_event();
+  event->impl->allocator = *allocator;
 
   rmw_event_type_t rmw_event_type = RMW_EVENT_INVALID;
   switch (event_type) {
@@ -111,10 +120,8 @@ rcl_subscription_event_init(
       return RCL_RET_INVALID_ARGUMENT;
   }
 
-  event->impl->rmw_handle =
-    rmw_create_subscription_event(subscription->impl->rmw_handle, rmw_event_type);
-
-  return ret;
+  return rmw_subscription_event_init(&event->impl->rmw_handle,
+    subscription->impl->rmw_handle, rmw_event_type);
 }
 
 rcl_ret_t
@@ -125,7 +132,7 @@ rcl_take_event(
   bool taken = false;
   RCL_CHECK_ARGUMENT_FOR_NULL(event, RCL_RET_INVALID_ARGUMENT);
   RCL_CHECK_ARGUMENT_FOR_NULL(event_info, RCL_RET_INVALID_ARGUMENT);
-  rmw_ret_t ret = rmw_take_event(event->impl->rmw_handle, event_info, &taken);
+  rmw_ret_t ret = rmw_take_event(&event->impl->rmw_handle, event_info, &taken);
   if (RMW_RET_OK != ret) {
     RCL_SET_ERROR_MSG(rmw_get_error_string().str);
     return rcl_convert_rmw_ret_to_rcl_ret(ret);
@@ -141,9 +148,23 @@ rcl_take_event(
 rcl_ret_t
 rcl_event_fini(rcl_event_t * event)
 {
-  rmw_ret_t ret = rmw_destroy_event(event->impl->rmw_handle);
-  event->impl = NULL;
-  return rcl_convert_rmw_ret_to_rcl_ret(ret);
+  rcl_ret_t result = RCL_RET_OK;
+  RCL_CHECK_ARGUMENT_FOR_NULL(event, RCL_RET_EVENT_INVALID);
+
+  RCUTILS_LOG_DEBUG_NAMED(ROS_PACKAGE_NAME, "Finalizing event");
+  if (NULL != event->impl) {
+    rcl_allocator_t allocator = event->impl->allocator;
+    rmw_ret_t ret = rmw_event_fini(&event->impl->rmw_handle);
+    if (ret != RMW_RET_OK) {
+      RCL_SET_ERROR_MSG(rmw_get_error_string().str);
+      result = rcl_convert_rmw_ret_to_rcl_ret(ret);
+    }
+    allocator.deallocate(event->impl, allocator.state);
+    event->impl = NULL;
+  }
+  RCUTILS_LOG_DEBUG_NAMED(ROS_PACKAGE_NAME, "Event finalized");
+
+  return result;
 }
 
 rmw_event_t *
@@ -152,7 +173,7 @@ rcl_event_get_rmw_handle(const rcl_event_t * event)
   if (NULL == event) {
     return NULL;  // error already set
   } else {
-    return event->impl->rmw_handle;
+    return &event->impl->rmw_handle;
   }
 }
 

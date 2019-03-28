@@ -80,8 +80,7 @@ public:
 
     // init publisher events
     publisher_event = rcl_get_zero_initialized_event();
-    ret = rcl_publisher_event_init(&publisher_event, &publisher,
-      pub_event_type, &publisher_options.allocator);
+    ret = rcl_publisher_event_init(&publisher_event, &publisher, pub_event_type);
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
 
     // init subscription
@@ -93,8 +92,7 @@ public:
 
     // init subscription event
     subscription_event = rcl_get_zero_initialized_event();
-    ret = rcl_subscription_event_init(&subscription_event, &subscription,
-      sub_event_type, &subscription_options.allocator);
+    ret = rcl_subscription_event_init(&subscription_event, &subscription, sub_event_type);
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
   }
 
