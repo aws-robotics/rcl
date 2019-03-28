@@ -31,7 +31,7 @@ extern "C"
 #include "rmw/validate_full_topic_name.h"
 
 #include "./common.h"
-#include "./types_impl.h"
+#include "./publisher_impl.h"
 
 
 rcl_publisher_t

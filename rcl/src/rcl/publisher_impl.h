@@ -12,17 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef RCL__TYPES_IMPL_H_
-#define RCL__TYPES_IMPL_H_
+#ifndef RCL__PUBLISHER_IMPL_H_
+#define RCL__PUBLISHER_IMPL_H_
 
 #include "rmw/rmw.h"
 
 #include "rcl/publisher.h"
-#include "rcl/subscription.h"
-#include "rcl/client.h"
-#include "rcl/service.h"
-
-#include "rcutils/stdatomic_helper.h"
 
 
 typedef struct rcl_publisher_impl_t
@@ -32,29 +27,4 @@ typedef struct rcl_publisher_impl_t
   rmw_publisher_t * rmw_handle;
 } rcl_publisher_impl_t;
 
-typedef struct rcl_subscription_impl_t
-{
-  rcl_subscription_options_t options;
-  rmw_subscription_t * rmw_handle;
-} rcl_subscription_impl_t;
-
-typedef struct rcl_client_impl_t
-{
-  rcl_client_options_t options;
-  rmw_client_t * rmw_handle;
-  atomic_int_least64_t sequence_number;
-} rcl_client_impl_t;
-
-typedef struct rcl_service_impl_t
-{
-  rcl_service_options_t options;
-  rmw_service_t * rmw_handle;
-} rcl_service_impl_t;
-
-typedef struct rcl_event_impl_t
-{
-  rmw_event_t * rmw_handle;
-} rcl_event_impl_t;
-
-
-#endif  // RCL__TYPES_IMPL_H_
+#endif  // RCL__PUBLISHER_IMPL_H_

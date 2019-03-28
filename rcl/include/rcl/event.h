@@ -1,4 +1,4 @@
-// Copyright 2015 Open Source Robotics Foundation, Inc.
+// Copyright 2019 Open Source Robotics Foundation, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,32 +30,20 @@ extern "C"
 
 typedef enum rcl_publisher_event_type_t
 {
-  RCL_PUBLISHER_DEADLINE,
-  RCL_PUBLISHER_LIVELINESS
+  RCL_PUBLISHER_OFFERED_DEADLINE_MISSED,
+  RCL_PUBLISHER_LIVELINESS_LOST
 } rcl_publisher_event_type_t;
-
 
 typedef enum rcl_subscription_event_type_t
 {
-  RCL_SUBSCRIPTION_DEADLINE,
-  RCL_SUBSCRIPTION_LIVELINESS
+  RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED,
+  RCL_SUBSCRIPTION_LIVELINESS_CHANGED
 } rcl_subscription_event_type_t;
-
-typedef enum rcl_client_event_type_t
-{
-  RCL_CLIENT_EVENT_UNIMPLEMENTED
-} rcl_client_event_type_t;
-
-typedef enum rcl_service_event_type_t
-{
-  RCL_SERVICE_EVENT_UNIMPLEMENTED
-} rcl_service_event_type_t;
-
 
 /// Internal rcl implementation struct.
 struct rcl_event_impl_t;
 
-/// Structure which encapsulates a ROS Subscription.
+/// Structure which encapsulates a ROS QoS event handle.
 typedef struct rcl_event_t
 {
   struct rcl_event_impl_t * impl;
@@ -72,16 +60,14 @@ RCL_WARN_UNUSED
 rcl_event_t
 rcl_get_zero_initialized_event(void);
 
-
 RCL_PUBLIC
 RCL_WARN_UNUSED
 rcl_ret_t
 rcl_publisher_event_init(
   rcl_event_t * event,
   const rcl_publisher_t * publisher,
-  const rcl_publisher_options_t * options,
-  const rcl_publisher_event_type_t event_type);
-
+  const rcl_publisher_event_type_t event_type,
+  const rcl_allocator_t * allocator);
 
 RCL_PUBLIC
 RCL_WARN_UNUSED
@@ -89,29 +75,8 @@ rcl_ret_t
 rcl_subscription_event_init(
   rcl_event_t * event,
   const rcl_subscription_t * subscription,
-  const rcl_subscription_options_t * options,
-  const rcl_subscription_event_type_t event_type);
-
-
-RCL_PUBLIC
-RCL_WARN_UNUSED
-rcl_ret_t
-rcl_client_event_init(
-  rcl_event_t * event,
-  const rcl_client_t * client,
-  const rcl_client_options_t * options,
-  const rcl_client_event_type_t event_type);
-
-
-RCL_PUBLIC
-RCL_WARN_UNUSED
-rcl_ret_t
-rcl_service_event_init(
-  rcl_event_t * event,
-  const rcl_service_t * service,
-  const rcl_service_options_t * options,
-  const rcl_service_event_type_t event_type);
-
+  const rcl_subscription_event_type_t event_type,
+  const rcl_allocator_t * allocator);
 
 RCL_PUBLIC
 RCL_WARN_UNUSED
@@ -120,12 +85,10 @@ rcl_take_event(
   const rcl_event_t * event,
   void * event_info);
 
-
 RCL_PUBLIC
 RCL_WARN_UNUSED
 rcl_ret_t
 rcl_event_fini(rcl_event_t * event);
-
 
 /// Return the rmw event handle.
 /**

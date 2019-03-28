@@ -1,4 +1,4 @@
-// Copyright 2015 Open Source Robotics Foundation, Inc.
+// Copyright 2019 Open Source Robotics Foundation, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,14 @@ extern "C"
 #include "rmw/validate_full_topic_name.h"
 
 #include "./common.h"
-#include "./types_impl.h"
+#include "./publisher_impl.h"
+#include "./subscription_impl.h"
+
+
+typedef struct rcl_event_impl_t
+{
+  rmw_event_t * rmw_handle;
+} rcl_event_impl_t;
 
 
 rcl_event_t
@@ -43,14 +50,12 @@ rcl_ret_t
 rcl_publisher_event_init(
   rcl_event_t * event,
   const rcl_publisher_t * publisher,
-  const rcl_publisher_options_t * options,
-  const rcl_publisher_event_type_t event_type)
+  const rcl_publisher_event_type_t event_type,
+  const rcl_allocator_t * allocator)
 {
   rcl_ret_t ret = RCL_RET_OK;
 
-  // Check options and allocator first, so allocator can be used with errors.
-  RCL_CHECK_ARGUMENT_FOR_NULL(options, RCL_RET_INVALID_ARGUMENT);
-  rcl_allocator_t * allocator = (rcl_allocator_t *)&options->allocator;
+  // Check allocator first, so allocator can be used with errors.
   RCL_CHECK_ALLOCATOR_WITH_MSG(allocator, "invalid allocator", return RCL_RET_INVALID_ARGUMENT);
 
   // Allocate space for the implementation struct.
@@ -59,12 +64,12 @@ rcl_publisher_event_init(
   RCL_CHECK_FOR_NULL_WITH_MSG(
     event->impl, "allocating memory failed", ret = RCL_RET_BAD_ALLOC; return ret);
 
-  rmw_event_type_t rmw_event_type;
+  rmw_event_type_t rmw_event_type = RMW_EVENT_INVALID;
   switch (event_type) {
-    case RCL_PUBLISHER_DEADLINE:
+    case RCL_PUBLISHER_OFFERED_DEADLINE_MISSED:
       rmw_event_type = RMW_EVENT_OFFERED_DEADLINE_MISSED;
       break;
-    case RCL_PUBLISHER_LIVELINESS:
+    case RCL_PUBLISHER_LIVELINESS_LOST:
       rmw_event_type = RMW_EVENT_LIVELINESS_LOST;
       break;
     default:
@@ -80,14 +85,12 @@ rcl_ret_t
 rcl_subscription_event_init(
   rcl_event_t * event,
   const rcl_subscription_t * subscription,
-  const rcl_subscription_options_t * options,
-  const rcl_subscription_event_type_t event_type)
+  const rcl_subscription_event_type_t event_type,
+  const rcl_allocator_t * allocator)
 {
   rcl_ret_t ret = RCL_RET_OK;
 
-  // Check options and allocator first, so allocator can be used with errors.
-  RCL_CHECK_ARGUMENT_FOR_NULL(options, RCL_RET_INVALID_ARGUMENT);
-  rcl_allocator_t * allocator = (rcl_allocator_t *)&options->allocator;
+  // Check allocator first, so allocator can be used with errors.
   RCL_CHECK_ALLOCATOR_WITH_MSG(allocator, "invalid allocator", return RCL_RET_INVALID_ARGUMENT);
 
   // Allocate space for the implementation struct.
@@ -96,12 +99,12 @@ rcl_subscription_event_init(
   RCL_CHECK_FOR_NULL_WITH_MSG(
     event->impl, "allocating memory failed", ret = RCL_RET_BAD_ALLOC; return ret);
 
-  rmw_event_type_t rmw_event_type;
+  rmw_event_type_t rmw_event_type = RMW_EVENT_INVALID;
   switch (event_type) {
-    case RCL_SUBSCRIPTION_DEADLINE:
+    case RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED:
       rmw_event_type = RMW_EVENT_REQUESTED_DEADLINE_MISSED;
       break;
-    case RCL_SUBSCRIPTION_LIVELINESS:
+    case RCL_SUBSCRIPTION_LIVELINESS_CHANGED:
       rmw_event_type = RMW_EVENT_LIVELINESS_CHANGED;
       break;
     default:
@@ -115,70 +118,17 @@ rcl_subscription_event_init(
 }
 
 rcl_ret_t
-rcl_client_event_init(
-  rcl_event_t * event,
-  const rcl_client_t * client,
-  const rcl_client_options_t * options,
-  const rcl_client_event_type_t event_type)
-{
-  rcl_ret_t ret = RCL_RET_OK;
-
-  // Check options and allocator first, so allocator can be used with errors.
-  RCL_CHECK_ARGUMENT_FOR_NULL(options, RCL_RET_INVALID_ARGUMENT);
-  rcl_allocator_t * allocator = (rcl_allocator_t *)&options->allocator;
-  RCL_CHECK_ALLOCATOR_WITH_MSG(allocator, "invalid allocator", return RCL_RET_INVALID_ARGUMENT);
-
-  // Allocate space for the implementation struct.
-  event->impl = (rcl_event_impl_t *) allocator->allocate(
-    sizeof(rcl_event_impl_t), allocator->state);
-  RCL_CHECK_FOR_NULL_WITH_MSG(
-    event->impl, "allocating memory failed", ret = RCL_RET_BAD_ALLOC; return ret);
-
-  event->impl->rmw_handle = rmw_create_client_event(client->impl->rmw_handle);
-
-  return ret;
-}
-
-rcl_ret_t
-rcl_service_event_init(
-  rcl_event_t * event,
-  const rcl_service_t * service,
-  const rcl_service_options_t * options,
-  const rcl_service_event_type_t event_type)
-{
-  rcl_ret_t ret = RCL_RET_OK;
-
-  // Check options and allocator first, so allocator can be used with errors.
-  RCL_CHECK_ARGUMENT_FOR_NULL(options, RCL_RET_INVALID_ARGUMENT);
-  rcl_allocator_t * allocator = (rcl_allocator_t *)&options->allocator;
-  RCL_CHECK_ALLOCATOR_WITH_MSG(allocator, "invalid allocator", return RCL_RET_INVALID_ARGUMENT);
-
-  // Allocate space for the implementation struct.
-  event->impl = (rcl_event_impl_t *) allocator->allocate(
-    sizeof(rcl_event_impl_t), allocator->state);
-  RCL_CHECK_FOR_NULL_WITH_MSG(
-    event->impl, "allocating memory failed", ret = RCL_RET_BAD_ALLOC; return ret);
-
-  event->impl->rmw_handle = rmw_create_service_event(service->impl->rmw_handle);
-
-  return ret;
-}
-
-rcl_ret_t
 rcl_take_event(
   const rcl_event_t * event,
-  void * event_status)
+  void * event_info)
 {
-  bool taken;
+  bool taken = false;
   RCL_CHECK_ARGUMENT_FOR_NULL(event, RCL_RET_INVALID_ARGUMENT);
-  RCL_CHECK_ARGUMENT_FOR_NULL(event_status, RCL_RET_INVALID_ARGUMENT);
-  rmw_ret_t ret = rmw_take_event(event->impl->rmw_handle, event_status, &taken);
+  RCL_CHECK_ARGUMENT_FOR_NULL(event_info, RCL_RET_INVALID_ARGUMENT);
+  rmw_ret_t ret = rmw_take_event(event->impl->rmw_handle, event_info, &taken);
   if (RMW_RET_OK != ret) {
     RCL_SET_ERROR_MSG(rmw_get_error_string().str);
-    if (RMW_RET_BAD_ALLOC == ret) {
-      return RCL_RET_BAD_ALLOC;
-    }
-    return RCL_RET_ERROR;
+    return rcl_convert_rmw_ret_to_rcl_ret(ret);
   }
   RCUTILS_LOG_DEBUG_NAMED(
     ROS_PACKAGE_NAME, "Event take request succeeded: %s", taken ? "true" : "false");

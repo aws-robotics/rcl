@@ -29,7 +29,7 @@ extern "C"
 #include "rmw/validate_full_topic_name.h"
 
 #include "./common.h"
-#include "./types_impl.h"
+#include "./subscription_impl.h"
 
 
 rcl_subscription_t
