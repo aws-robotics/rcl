@@ -1,4 +1,4 @@
-// Copyright 2018 Open Source Robotics Foundation, Inc.
+// Copyright 2015 Open Source Robotics Foundation, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,32 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef RCL_ACTION__DEFAULT_QOS_H_
-#define RCL_ACTION__DEFAULT_QOS_H_
+#ifndef RCL__PUBLISHER_IMPL_H_
+#define RCL__PUBLISHER_IMPL_H_
 
-#ifdef __cplusplus
-extern "C"
+#include "rmw/rmw.h"
+
+#include "rcl/publisher.h"
+
+
+typedef struct rcl_publisher_impl_t
 {
-#endif
+  rcl_publisher_options_t options;
+  rcl_context_t * context;
+  rmw_publisher_t * rmw_handle;
+} rcl_publisher_impl_t;
 
-#include "rmw/types.h"
-
-
-static const rmw_qos_profile_t rcl_action_qos_profile_status_default =
-{
-  RMW_QOS_POLICY_HISTORY_KEEP_LAST,
-  1,
-  RMW_QOS_POLICY_RELIABILITY_RELIABLE,
-  RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
-  {0, 0},
-  {0, 0},
-  RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
-  {0, 0},
-  false
-};
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif  // RCL_ACTION__DEFAULT_QOS_H_
+#endif  // RCL__PUBLISHER_IMPL_H_
