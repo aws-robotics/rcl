@@ -83,7 +83,7 @@ rcl_publisher_event_init(
   }
 
   return rmw_publisher_event_init(&event->impl->rmw_handle,
-    publisher->impl->rmw_handle, rmw_event_type);
+           publisher->impl->rmw_handle, rmw_event_type);
 }
 
 rcl_ret_t
@@ -121,7 +121,7 @@ rcl_subscription_event_init(
   }
 
   return rmw_subscription_event_init(&event->impl->rmw_handle,
-    subscription->impl->rmw_handle, rmw_event_type);
+           subscription->impl->rmw_handle, rmw_event_type);
 }
 
 rcl_ret_t
