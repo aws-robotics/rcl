@@ -194,7 +194,7 @@ TEST_F(CLASSNAME(TestCountFixture, RMW_IMPLEMENTATION),
 
   rcl_publisher_t pub = rcl_get_zero_initialized_publisher();
 
-  rcl_publisher_options_t pub_ops;
+  rcl_publisher_options_t pub_ops = rcl_publisher_get_default_options();
   pub_ops.qos.history = RMW_QOS_POLICY_HISTORY_KEEP_LAST;
   pub_ops.qos.depth = 10;
   pub_ops.qos.reliability = RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT;
