@@ -260,6 +260,19 @@ rcl_publish_serialized_message(
   return RCL_RET_OK;
 }
 
+rcl_ret_t
+rcl_publisher_assert_liveliness(const rcl_publisher_t * publisher)
+{
+  if (!rcl_publisher_is_valid(publisher)) {
+    return RCL_RET_PUBLISHER_INVALID;  // error already set
+  }
+  if (rmw_publisher_assert_liveliness(publisher->impl->rmw_handle) != RMW_RET_OK) {
+    RCL_SET_ERROR_MSG(rmw_get_error_string().str);
+    return RCL_RET_ERROR;
+  }
+  return RCL_RET_OK;
+}
+
 const char *
 rcl_publisher_get_topic_name(const rcl_publisher_t * publisher)
 {
