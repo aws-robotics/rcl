@@ -27,9 +27,12 @@
 
 #include "osrf_testing_tools_cpp/scope_exit.hpp"
 
-constexpr int DISCOVERY_WAIT_TIME_IN_MS = 1000;
-constexpr int LIVELINESS_LEASE_DURATION_IN_MS = 1000;
-constexpr int DEADLINE_PERIOD_IN_MS = 1000;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+
+constexpr seconds DISCOVERY_WAIT_TIME_IN_S(1);
+constexpr seconds LIVELINESS_LEASE_DURATION_IN_S(1);
+constexpr seconds DEADLINE_PERIOD_IN_S(1);
 
 #ifdef RMW_IMPLEMENTATION
 # define CLASSNAME_(NAME, SUFFIX) NAME ## __ ## SUFFIX
@@ -38,17 +41,16 @@ constexpr int DEADLINE_PERIOD_IN_MS = 1000;
 # define CLASSNAME(NAME, SUFFIX) NAME
 #endif
 
-bool is_opensplice =
-  std::string(rmw_get_implementation_identifier()).find("rmw_opensplice") == 0;
-
-bool is_fastrtps =
-  std::string(rmw_get_implementation_identifier()).find("rmw_fastrtps") == 0;
-
 class CLASSNAME (TestEventFixture, RMW_IMPLEMENTATION) : public ::testing::Test
 {
 public:
   void SetUp()
   {
+    const bool is_opensplice =
+      std::string(rmw_get_implementation_identifier()).find("rmw_opensplice") == 0;
+    const bool is_fastrtps =
+      std::string(rmw_get_implementation_identifier()).find("rmw_fastrtps") == 0;
+
     is_unsupported = is_fastrtps || is_opensplice;
     rcl_ret_t ret;
     {
@@ -107,15 +109,15 @@ public:
              &subscription_options);
   }
 
-  void SetUpPubSub(
+  void SetupPublisherAndSubscriber(
     const rcl_publisher_event_type_t & pub_event_type,
     const rcl_subscription_event_type_t & sub_event_type)
   {
     rcl_ret_t ret;
 
     rmw_time_t lifespan {0, 0};
-    rmw_time_t deadline {DEADLINE_PERIOD_IN_MS / 1000, 0};
-    rmw_time_t lease_duration {LIVELINESS_LEASE_DURATION_IN_MS / 1000, 0};
+    rmw_time_t deadline {DEADLINE_PERIOD_IN_S.count(), 0};
+    rmw_time_t lease_duration {LIVELINESS_LEASE_DURATION_IN_S.count(), 0};
     rmw_qos_liveliness_policy_t liveliness_policy = RMW_QOS_POLICY_LIVELINESS_AUTOMATIC;
 
     // init publisher
@@ -336,14 +338,14 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_liveliness_k
   if (is_unsupported) {
     return;
   }
-  // initialize publisher and subscriber
-  SetUpPubSub(RCL_PUBLISHER_LIVELINESS_LOST, RCL_SUBSCRIPTION_LIVELINESS_CHANGED);
+
+  SetupPublisherAndSubscriber(RCL_PUBLISHER_LIVELINESS_LOST, RCL_SUBSCRIPTION_LIVELINESS_CHANGED);
 
   // wait for discovery
   // TODO(wjwwood): add logic to wait for the connection to be established
   //                probably using the count_subscriptions busy wait mechanism
   //                until then we will sleep for a short period of time
-  std::this_thread::sleep_for(std::chrono::milliseconds(DISCOVERY_WAIT_TIME_IN_MS));
+  std::this_thread::sleep_for(DISCOVERY_WAIT_TIME_IN_S);
 
   rcl_ret_t ret;
 
@@ -365,7 +367,7 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_liveliness_k
   EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
 
   // wait for lease duration to expire
-  std::this_thread::sleep_for(std::chrono::milliseconds(LIVELINESS_LEASE_DURATION_IN_MS + 500));
+  std::this_thread::sleep_for(LIVELINESS_LEASE_DURATION_IN_S + milliseconds(500));
 
   // wait for events
   bool msg_ready, subscription_event_ready, publisher_event_ready;
@@ -415,14 +417,15 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_deadline_mis
   if (is_unsupported) {
     return;
   }
-  // initialize publisher and subscriber
-  SetUpPubSub(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED, RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED);
+
+  SetupPublisherAndSubscriber(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED,
+    RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED);
 
   // wait for discovery. also adds delay to publishing of message
   // TODO(wjwwood): add logic to wait for the connection to be established
   //                probably using the count_subscriptions busy wait mechanism
   //                until then we will sleep for a short period of time
-  std::this_thread::sleep_for(std::chrono::milliseconds(DEADLINE_PERIOD_IN_MS + 500));
+  std::this_thread::sleep_for(DEADLINE_PERIOD_IN_S + milliseconds(500));
 
   rcl_ret_t ret;
 
@@ -487,14 +490,15 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_no_deadline_
   if (is_unsupported) {
     return;
   }
-  // initialize publisher and subscriber
-  SetUpPubSub(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED, RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED);
+
+  SetupPublisherAndSubscriber(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED,
+    RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED);
 
   // wait for discovery. also adds delay to publishing of message
   // TODO(wjwwood): add logic to wait for the connection to be established
   //                probably using the count_subscriptions busy wait mechanism
   //                until then we will sleep for a short period of time
-  std::this_thread::sleep_for(std::chrono::milliseconds(DEADLINE_PERIOD_IN_MS - 500));
+  std::this_thread::sleep_for(DEADLINE_PERIOD_IN_S - milliseconds(500));
 
   rcl_ret_t ret;
 
