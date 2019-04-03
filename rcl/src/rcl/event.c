@@ -122,8 +122,10 @@ rcl_subscription_event_init(
       return RCL_RET_INVALID_ARGUMENT;
   }
 
-  return rmw_subscription_event_init(&event->impl->rmw_handle,
-           subscription->impl->rmw_handle, rmw_event_type);
+  return rmw_subscription_event_init(
+    &event->impl->rmw_handle,
+    subscription->impl->rmw_handle,
+    rmw_event_type);
 }
 
 rcl_ret_t
