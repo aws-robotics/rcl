@@ -46,12 +46,10 @@ class CLASSNAME (TestEventFixture, RMW_IMPLEMENTATION) : public ::testing::Test
 public:
   void SetUp()
   {
-    const bool is_opensplice =
-      std::string(rmw_get_implementation_identifier()).find("rmw_opensplice") == 0;
-    const bool is_fastrtps =
+    is_unsupported =
       std::string(rmw_get_implementation_identifier()).find("rmw_fastrtps") == 0;
-
-    is_unsupported = is_fastrtps || is_opensplice;
+    is_opensplice =
+      std::string(rmw_get_implementation_identifier()).find("rmw_opensplice") == 0;
     rcl_ret_t ret;
     {
       rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
@@ -180,7 +178,7 @@ protected:
   rcl_event_t publisher_event;
   rcl_subscription_t subscription;
   rcl_event_t subscription_event;
-  bool is_unsupported;
+  bool is_unsupported, is_opensplice;
   const char * topic = "rcl_test_publisher_subscription_events";
   const rosidl_message_type_support_t * ts;
 };
@@ -394,7 +392,12 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_liveliness_k
     ret = rcl_take_event(&subscription_event, &liveliness_status);
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
     EXPECT_EQ(liveliness_status.alive_count, 0);
-    EXPECT_EQ(liveliness_status.alive_count_change, 0);
+    int expected_alive_count_change = 0;
+    // opensplice and connext differ in expected values
+    if (is_opensplice) {
+      expected_alive_count_change = 2;
+    }
+    EXPECT_EQ(liveliness_status.alive_count_change, expected_alive_count_change);
     EXPECT_EQ(liveliness_status.not_alive_count, 0);
     EXPECT_EQ(liveliness_status.not_alive_count_change, 0);
   }
