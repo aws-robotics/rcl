@@ -30,7 +30,6 @@
 using std::chrono::milliseconds;
 using std::chrono::seconds;
 
-constexpr seconds DISCOVERY_WAIT_TIME_IN_S(1);
 constexpr seconds LIVELINESS_LEASE_DURATION_IN_S(1);
 constexpr seconds DEADLINE_PERIOD_IN_S(1);
 
@@ -74,7 +73,7 @@ public:
     ts = ROSIDL_GET_MSG_TYPE_SUPPORT(test_msgs, msg, Primitives);
   }
 
-  rcl_ret_t SetupPublisher(
+  rcl_ret_t setupPublisher(
     const rmw_time_t & deadline,
     const rmw_time_t & lifespan,
     const rmw_time_t & liveliness_lease_duration,
@@ -91,7 +90,7 @@ public:
              &publisher_options);
   }
 
-  rcl_ret_t SetupSubscriber(
+  rcl_ret_t setupSubscriber(
     const rmw_time_t & deadline,
     const rmw_time_t & lifespan,
     const rmw_time_t & liveliness_lease_duration,
@@ -109,7 +108,7 @@ public:
              &subscription_options);
   }
 
-  void SetupPublisherAndSubscriber(
+  void setupPublisherAndSubscriber(
     const rcl_publisher_event_type_t & pub_event_type,
     const rcl_subscription_event_type_t & sub_event_type)
   {
@@ -121,7 +120,7 @@ public:
     rmw_qos_liveliness_policy_t liveliness_policy = RMW_QOS_POLICY_LIVELINESS_AUTOMATIC;
 
     // init publisher
-    ret = SetupPublisher(deadline, lifespan, lease_duration, liveliness_policy);
+    ret = setupPublisher(deadline, lifespan, lease_duration, liveliness_policy);
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
 
     // init publisher events
@@ -130,16 +129,32 @@ public:
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
 
     // init subscription
-    ret = SetupSubscriber(deadline, lifespan, lease_duration, liveliness_policy);
+    ret = setupSubscriber(deadline, lifespan, lease_duration, liveliness_policy);
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
 
     // init subscription event
     subscription_event = rcl_get_zero_initialized_event();
     ret = rcl_subscription_event_init(&subscription_event, &subscription, sub_event_type);
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
+
+    // wait for discovery
+    // total wait time of 10 seconds, if never ready
+    size_t max_iterations = 100;
+    milliseconds wait_period(10);
+    size_t iteration = 0;
+    do {
+      iteration++;
+      size_t count = 0;
+      rcl_ret_t ret = rcl_subscription_get_publisher_count(&subscription, &count);
+      ASSERT_EQ(RCL_RET_OK, ret);
+      if (count > 0) {
+        break;
+      }
+      std::this_thread::sleep_for(wait_period);
+    } while (iteration < max_iterations);
   }
 
-  void TearDownPubSub()
+  void tearDownPubSub()
   {
     rcl_ret_t ret;
 
@@ -241,6 +256,7 @@ wait_for_msgs_and_events(
     for (size_t i = 0; i < wait_set.size_of_subscriptions; ++i) {
       if (wait_set.subscriptions[i] && wait_set.subscriptions[i] == subscription) {
         msg_ready = true;
+        break;
       }
     }
     for (size_t i = 0; i < wait_set.size_of_events; ++i) {
@@ -264,18 +280,18 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_unsupported_lifespa
     rmw_time_t lease_duration {1, 0};
     rmw_qos_liveliness_policy_t liveliness_policy = RMW_QOS_POLICY_LIVELINESS_AUTOMATIC;
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupSubscriber(deadline, lifespan, lease_duration,
+      setupSubscriber(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized subscriber lifespan when unsupported";
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupPublisher(deadline, lifespan, lease_duration,
+      setupPublisher(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized publisher lifespan when unsupported";
 
     lifespan = {0, 1};
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupSubscriber(deadline, lifespan, lease_duration,
+      setupSubscriber(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized subscriber lifespan when unsupported";
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupPublisher(deadline, lifespan, lease_duration,
+      setupPublisher(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized publisher lifespan when unsupported";
   }
 }
@@ -287,21 +303,21 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_unsupported_livelin
     rmw_time_t lease_duration {0, 0};
     rmw_qos_liveliness_policy_t liveliness_policy = RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_NODE;
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupSubscriber(deadline, lifespan, lease_duration,
+      setupSubscriber(deadline, lifespan, lease_duration,
       liveliness_policy)) <<
       "Initialized subscriber RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_NODE when unsupported";
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupPublisher(deadline, lifespan, lease_duration,
+      setupPublisher(deadline, lifespan, lease_duration,
       liveliness_policy)) <<
       "Initialized publisher RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_NODE when unsupported";
 
     liveliness_policy = RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC;
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupSubscriber(deadline, lifespan, lease_duration,
+      setupSubscriber(deadline, lifespan, lease_duration,
       liveliness_policy)) <<
       "Initialized subscriber RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC when unsupported";
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupPublisher(deadline, lifespan, lease_duration,
+      setupPublisher(deadline, lifespan, lease_duration,
       liveliness_policy)) <<
       "Initialized publisher RMW_QOS_POLICY_LIVELINESS_MANUAL_BY_TOPIC when unsupported";
   }
@@ -309,23 +325,23 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_unsupported_livelin
 
 TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_unsupported_unsupported_deadline) {
   if (is_unsupported) {
-    rmw_time_t deadline;
+    rmw_time_t deadline {0, 0};
     rmw_time_t lifespan {0, 0};
     rmw_time_t lease_duration {0, 0};
     rmw_qos_liveliness_policy_t liveliness_policy = RMW_QOS_POLICY_LIVELINESS_AUTOMATIC;
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupSubscriber(deadline, lifespan, lease_duration,
+      setupSubscriber(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized subscriber deadline when unsupported";
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupPublisher(deadline, lifespan, lease_duration,
+      setupPublisher(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized publisher deadline when unsupported";
 
     deadline = {0, 1};
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupSubscriber(deadline, lifespan, lease_duration,
+      setupSubscriber(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized subscriber deadline when unsupported";
     EXPECT_EQ(RMW_RET_ERROR,
-      SetupPublisher(deadline, lifespan, lease_duration,
+      setupPublisher(deadline, lifespan, lease_duration,
       liveliness_policy)) << "Initialized publisher deadline when unsupported";
   }
 }
@@ -339,14 +355,7 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_liveliness_k
     return;
   }
 
-  SetupPublisherAndSubscriber(RCL_PUBLISHER_LIVELINESS_LOST, RCL_SUBSCRIPTION_LIVELINESS_CHANGED);
-
-  // wait for discovery
-  // TODO(wjwwood): add logic to wait for the connection to be established
-  //                probably using the count_subscriptions busy wait mechanism
-  //                until then we will sleep for a short period of time
-  std::this_thread::sleep_for(DISCOVERY_WAIT_TIME_IN_S);
-
+  setupPublisherAndSubscriber(RCL_PUBLISHER_LIVELINESS_LOST, RCL_SUBSCRIPTION_LIVELINESS_CHANGED);
   rcl_ret_t ret;
 
   // publish message to topic
@@ -418,7 +427,7 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_deadline_mis
     return;
   }
 
-  SetupPublisherAndSubscriber(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED,
+  setupPublisherAndSubscriber(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED,
     RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED);
 
   // wait for discovery. also adds delay to publishing of message
@@ -479,7 +488,7 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_deadline_mis
   }
 
   // clean up
-  TearDownPubSub();
+  tearDownPubSub();
 }
 
 /*
@@ -491,7 +500,7 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_no_deadline_
     return;
   }
 
-  SetupPublisherAndSubscriber(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED,
+  setupPublisherAndSubscriber(RCL_PUBLISHER_OFFERED_DEADLINE_MISSED,
     RCL_SUBSCRIPTION_REQUESTED_DEADLINE_MISSED);
 
   // wait for discovery. also adds delay to publishing of message
@@ -552,5 +561,5 @@ TEST_F(CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION), test_pubsub_no_deadline_
   }
 
   // clean up
-  TearDownPubSub();
+  tearDownPubSub();
 }
