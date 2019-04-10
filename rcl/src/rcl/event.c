@@ -139,11 +139,11 @@ rcl_take_event(
   }
   if (!taken) {
     RCUTILS_LOG_DEBUG_NAMED(
-        ROS_PACKAGE_NAME, "take_event request complete, unable to take event");
+      ROS_PACKAGE_NAME, "take_event request complete, unable to take event");
     return RCL_RET_EVENT_TAKE_FAILED;
   }
   RCUTILS_LOG_DEBUG_NAMED(
-      ROS_PACKAGE_NAME, "take_event request success");
+    ROS_PACKAGE_NAME, "take_event request success");
   return rcl_convert_rmw_ret_to_rcl_ret(ret);
 }
 
