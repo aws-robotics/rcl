@@ -214,7 +214,7 @@ TEST_F(CLASSNAME(TestCountFixture, RMW_IMPLEMENTATION),
 
   rcl_subscription_t sub = rcl_get_zero_initialized_subscription();
 
-  rcl_subscription_options_t sub_ops;
+  rcl_subscription_options_t sub_ops = rcl_subscription_get_default_options();
   sub_ops.qos.history = RMW_QOS_POLICY_HISTORY_KEEP_LAST;
   sub_ops.qos.depth = 10;
   sub_ops.qos.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
