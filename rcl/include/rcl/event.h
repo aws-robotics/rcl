@@ -63,6 +63,17 @@ RCL_WARN_UNUSED
 rcl_event_t
 rcl_get_zero_initialized_event(void);
 
+/// Initialize an rcl_event_t with a publisher.
+/**
+ * Fill the rcl_event_t with the publisher and desired event_type.
+ *
+ * \param[in,out] event pointer to fill
+ * \param[in] publisher to get events from
+ * \param[in] event_type to listen for
+ * \return `RCL_RET_OK` if the rcl_event_t is filled, or
+ * \return `RCL_RET_INVALID_ARGUMENT` if any arguments are invalid, or
+ * \return `RCL_RET_ERROR` if an unspecified error occurs.
+ */
 RCL_PUBLIC
 RCL_WARN_UNUSED
 rcl_ret_t
@@ -71,6 +82,17 @@ rcl_publisher_event_init(
   const rcl_publisher_t * publisher,
   const rcl_publisher_event_type_t event_type);
 
+/// Initialize an rcl_event_t with a subscription.
+/**
+ * Fill the rcl_event_t with the subscription and desired event_type.
+ *
+ * \param[in,out] event pointer to fill
+ * \param[in] subscription to get events from
+ * \param[in] event_type to listen for
+ * \return `RCL_RET_OK` if the rcl_event_t is filled, or
+ * \return `RCL_RET_INVALID_ARGUMENT` if any arguments are invalid, or
+ * \return `RCL_RET_ERROR` if an unspecified error occurs.
+ */
 RCL_PUBLIC
 RCL_WARN_UNUSED
 rcl_ret_t
@@ -79,6 +101,17 @@ rcl_subscription_event_init(
   const rcl_subscription_t * subscription,
   const rcl_subscription_event_type_t event_type);
 
+// Take event using the event handle.
+/**
+ * Take an event from the event handle.
+ *
+ * \param[in] event_handle event object to take from
+ * \param[in, out] event_info event info object to write taken data into
+ * \param[in, out] taken boolean flag indicating if an event was taken or not
+ * \return `RCL_RET_OK` if successful, or
+ * \return `RCL_RET_BAD_ALLOC` if memory allocation failed, or
+ * \return `RCL_RET_ERROR` if an unexpected error occurs.
+ */
 RCL_PUBLIC
 RCL_WARN_UNUSED
 rcl_ret_t
@@ -86,6 +119,15 @@ rcl_take_event(
   const rcl_event_t * event,
   void * event_info);
 
+// Finalize an event.
+/**
+ * Finalize an event.
+ *
+ * \param[in] event to finalize
+ * \return `RCL_RET_OK` if successful, or
+ * \return `RCL_RET_EVENT_INVALID` if event is null, or
+ * \return `RCL_RET_ERROR` if an unexpected error occurs.
+ */
 RCL_PUBLIC
 RCL_WARN_UNUSED
 rcl_ret_t

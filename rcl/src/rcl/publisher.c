@@ -33,7 +33,6 @@ extern "C"
 #include "./common.h"
 #include "./publisher_impl.h"
 
-
 rcl_publisher_t
 rcl_get_zero_initialized_publisher()
 {
@@ -166,6 +165,17 @@ rcl_publisher_init(
     &(options->qos));
   RCL_CHECK_FOR_NULL_WITH_MSG(publisher->impl->rmw_handle,
     rmw_get_error_string().str, goto fail);
+  // get actual qos, and store it
+  rmw_ret = rmw_publisher_get_actual_qos(
+    publisher->impl->rmw_handle,
+    &publisher->impl->actual_qos);
+  if (RMW_RET_OK != rmw_ret) {
+    RCL_SET_ERROR_MSG(rmw_get_error_string().str);
+    ret = RCL_RET_ERROR;
+    goto fail;
+  }
+  publisher->impl->actual_qos.avoid_ros_namespace_conventions =
+    options->qos.avoid_ros_namespace_conventions;
   // options
   publisher->impl->options = *options;
   RCUTILS_LOG_DEBUG_NAMED(ROS_PACKAGE_NAME, "Publisher initialized");
@@ -355,6 +365,15 @@ rcl_publisher_get_subscription_count(
     return rcl_convert_rmw_ret_to_rcl_ret(ret);
   }
   return RCL_RET_OK;
+}
+
+const rmw_qos_profile_t *
+rcl_publisher_get_actual_qos(const rcl_publisher_t * publisher)
+{
+  if (!rcl_publisher_is_valid_except_context(publisher)) {
+    return NULL;
+  }
+  return &publisher->impl->actual_qos;
 }
 
 #ifdef __cplusplus
