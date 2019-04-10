@@ -535,7 +535,7 @@ rcl_node_assert_liveliness(const rcl_node_t * node)
     RCL_SET_ERROR_MSG(rmw_get_error_string().str);
     return RCL_RET_ERROR;
   }
-  return RCL_RET_OK;  
+  return RCL_RET_OK;
 }
 
 rmw_node_t *

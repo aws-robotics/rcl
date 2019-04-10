@@ -70,9 +70,7 @@ class TEST_FIXTURE_P_RMW (TestGetActualQoS)
   : public ::testing::TestWithParam<TestParameters>
 {
 public:
-  rcl_node_t * node_ptr;
-  rcl_context_t * context_ptr;
-  void SetUp()
+  void SetUp() override
   {
     rcl_ret_t ret;
     rcl_node_options_t node_options = rcl_node_get_default_options();
@@ -91,7 +89,7 @@ public:
     ASSERT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
   }
 
-  void TearDown()
+  void TearDown() override
   {
     rcl_ret_t ret;
 
@@ -106,6 +104,10 @@ public:
     delete this->context_ptr;
     EXPECT_EQ(RCL_RET_OK, ret) << rcl_get_error_string().str;
   }
+
+protected:
+  rcl_node_t * node_ptr;
+  rcl_context_t * context_ptr;
 };
 
 TEST_P_RMW(TestGetActualQoS, test_publisher_get_qos_settings) {
@@ -167,6 +169,10 @@ get_parameters()
         1000,
         RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
         RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
+        RMW_QOS_DEADLINE_DEFAULT,
+        RMW_QOS_LIFESPAN_DEFAULT,
+        RMW_QOS_POLICY_LIVELINESS_AUTOMATIC,
+        RMW_QOS_LIFESPAN_DEFAULT,
         true
       },
       {
@@ -174,6 +180,10 @@ get_parameters()
         1000,
         RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
         RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
+        RMW_QOS_DEADLINE_DEFAULT,
+        RMW_QOS_LIFESPAN_DEFAULT,
+        RMW_QOS_POLICY_LIVELINESS_AUTOMATIC,
+        RMW_QOS_LIFESPAN_DEFAULT,
         true
       },
       "publisher_non_default_qos"
@@ -182,34 +192,42 @@ get_parameters()
 
 #ifdef RMW_IMPLEMENTATION_STR
   std::string rmw_implementation_str = RMW_IMPLEMENTATION_STR;
-  if (!rmw_implementation_str.compare("rmw_fastrtps_cpp") ||
-    !rmw_implementation_str.compare("rmw_fastrtps_dynamic_cpp"))
+  if (rmw_implementation_str == "rmw_fastrtps_cpp" ||
+    rmw_implementation_str == "rmw_fastrtps_dynamic_cpp")
   {
     rmw_qos_profile_t expected_system_default_qos = {
       RMW_QOS_POLICY_HISTORY_KEEP_LAST,
       1,
       RMW_QOS_POLICY_RELIABILITY_RELIABLE,
       RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
+      RMW_QOS_DEADLINE_DEFAULT,
+      RMW_QOS_LIFESPAN_DEFAULT,
+      RMW_QOS_POLICY_LIVELINESS_AUTOMATIC,
+      RMW_QOS_LIFESPAN_DEFAULT,
       false};
     parameters.push_back({
       rmw_qos_profile_system_default,
       expected_system_default_qos,
       "publisher_system_default_qos"});
   } else {
-    if (!rmw_implementation_str.compare("rmw_opensplice_cpp") ||
-      !rmw_implementation_str.compare("rmw_connext_cpp") ||
-      !rmw_implementation_str.compare("rmw_connext_dynamic_cpp"))
+    if (rmw_implementation_str == "rmw_connext_cpp" ||
+        rmw_implementation_str == "rmw_connext_dynamic_cpp" ||
+        rmw_implementation_str == "rmw_opensplice_cpp")
     {
       rmw_qos_profile_t expected_system_default_qos = {
         RMW_QOS_POLICY_HISTORY_KEEP_LAST,
         1,
         RMW_QOS_POLICY_RELIABILITY_RELIABLE,
         RMW_QOS_POLICY_DURABILITY_VOLATILE,
+        RMW_QOS_DEADLINE_DEFAULT,
+        RMW_QOS_LIFESPAN_DEFAULT,
+        RMW_QOS_POLICY_LIVELINESS_AUTOMATIC,
+        RMW_QOS_LIFESPAN_DEFAULT,
         false};
       parameters.push_back({
-        rmw_qos_profile_system_default,
-        expected_system_default_qos,
-        "publisher_system_default_qos"});
+       rmw_qos_profile_system_default,
+       expected_system_default_qos,
+       "publisher_system_default_qos"});
     }
   }
 #endif
