@@ -40,7 +40,7 @@ constexpr seconds DEADLINE_PERIOD_IN_S(1);
 # define CLASSNAME(NAME, SUFFIX) NAME
 #endif
 
-class CLASSNAME (TestEventFixture, RMW_IMPLEMENTATION) : public ::testing::Test
+class CLASSNAME(TestEventFixture, RMW_IMPLEMENTATION) : public ::testing::Test
 {
 public:
   void SetUp()
@@ -220,7 +220,7 @@ wait_for_msgs_and_events(
 
   rcl_wait_set_t wait_set = rcl_get_zero_initialized_wait_set();
   rcl_ret_t ret = rcl_wait_set_init(&wait_set, num_subscriptions, 0, 0, 0, 0, num_events,
-      context, rcl_get_default_allocator());
+    context, rcl_get_default_allocator());
   EXPECT_EQ(ret, RCL_RET_OK) << rcl_get_error_string().str;
   OSRF_TESTING_TOOLS_CPP_SCOPE_EXIT({
     rcl_ret_t ret = rcl_wait_set_fini(&wait_set);
