@@ -37,21 +37,21 @@ typedef char * (* security_lookup_fn_t) (
   const char * node_name,
   const char * node_namespace,
   const char * ros_secure_root_env,
-  const rcl_allocator_t * allocator
+  const rcl_allocator_t allocator
 );
 
 char * exact_match_lookup(
   const char * node_name,
   const char * node_namespace,
   const char * ros_secure_root_env,
-  const rcl_allocator_t * allocator
+  const rcl_allocator_t allocator
 );
 
 char * prefix_match_lookup(
   const char * node_name,
   const char * node_namespace,
   const char * ros_secure_root_env,
-  const rcl_allocator_t * allocator
+  const rcl_allocator_t allocator
 );
 
 security_lookup_fn_t g_security_lookup_fns[] = {
@@ -125,25 +125,25 @@ char * exact_match_lookup(
   const char * node_name,
   const char * node_namespace,
   const char * ros_secure_root_env,
-  const rcl_allocator_t * allocator)
+  const rcl_allocator_t allocator)
 {
   // Perform an exact match for the node's name in directory <root dir>/<namespace>.
   char * node_secure_root = NULL;
   // "/" case when root namespace is explicitly passed in
   if (1 == strlen(node_namespace)) {
-    node_secure_root = rcutils_join_path(ros_secure_root_env, node_name, *allocator);
+    node_secure_root = rcutils_join_path(ros_secure_root_env, node_name, allocator);
   } else {
     char * node_fqn = NULL;
     char * node_root_path = NULL;
     // Combine node namespace with node name
     // TODO(ros2team): remove the hard-coded value of the root namespace
-    node_fqn = rcutils_format_string(*allocator, "%s%s%s", node_namespace, "/", node_name);
+    node_fqn = rcutils_format_string(allocator, "%s%s%s", node_namespace, "/", node_name);
     // Get native path, ignore the leading forward slash
     // TODO(ros2team): remove the hard-coded length, use the length of the root namespace instead
-    node_root_path = rcutils_to_native_path(node_fqn + 1, *allocator);
-    node_secure_root = rcutils_join_path(ros_secure_root_env, node_root_path, *allocator);
-    allocator->deallocate(node_fqn, allocator->state);
-    allocator->deallocate(node_root_path, allocator->state);
+    node_root_path = rcutils_to_native_path(node_fqn + 1, allocator);
+    node_secure_root = rcutils_join_path(ros_secure_root_env, node_root_path, allocator);
+    allocator.deallocate(node_fqn, allocator.state);
+    allocator.deallocate(node_root_path, allocator.state);
   }
   return node_secure_root;
 }
@@ -152,7 +152,7 @@ char * prefix_match_lookup(
   const char * node_name,
   const char * node_namespace,
   const char * ros_secure_root_env,
-  const rcl_allocator_t * allocator)
+  const rcl_allocator_t allocator)
 {
   // Perform longest prefix match for the node's name in directory <root dir>/<namespace>.
   char * node_secure_root = NULL;
@@ -162,21 +162,21 @@ char * prefix_match_lookup(
     base_lookup_dir = (char *) ros_secure_root_env;
   } else {
     // TODO(ros2team): remove the hard-coded length, use the length of the root namespace instead.
-    base_lookup_dir = rcutils_join_path(ros_secure_root_env, node_namespace + 1, *allocator);
+    base_lookup_dir = rcutils_join_path(ros_secure_root_env, node_namespace + 1, allocator);
   }
   if (get_best_matching_directory(base_lookup_dir, node_name, matched_dir)) {
-    node_secure_root = rcutils_join_path(base_lookup_dir, matched_dir, *allocator);
+    node_secure_root = rcutils_join_path(base_lookup_dir, matched_dir, allocator);
   }
   if (base_lookup_dir != ros_secure_root_env && NULL != base_lookup_dir) {
-    allocator->deallocate(base_lookup_dir, allocator->state);
+    allocator.deallocate(base_lookup_dir, allocator.state);
   }
   return node_secure_root;
 }
 
-const char * rcl_get_secure_root(
+char * rcl_get_secure_root(
   const char * node_name,
   const char * node_namespace,
-  const rcl_allocator_t * allocator)
+  const rcl_allocator_t allocator)
 {
   bool ros_secure_node_override = true;
 
@@ -208,9 +208,11 @@ const char * rcl_get_secure_root(
     }
   }
 
+  bool ros_secure_root_env_is_assigned = false;
+
   // found a usable environment variable, copy into our memory before overwriting with next lookup
   char * ros_secure_root_env =
-    (char *)allocator->allocate(ros_secure_root_size + 1, allocator->state);
+    (char *)allocator.allocate(ros_secure_root_size + 1, allocator.state);
   memcpy(ros_secure_root_env, env_buf, ros_secure_root_size + 1);
   // TODO(ros2team): This make an assumption on the value and length of the root namespace.
   // This should likely come from another (rcl/rmw?) function for reuse.
@@ -221,6 +223,7 @@ const char * rcl_get_secure_root(
   if (ros_secure_node_override) {
     node_secure_root = ros_secure_root_env;
     lookup_strategy = g_security_lookup_type_strings[ROS_SECURITY_LOOKUP_NODE_OVERRIDE];
+    ros_secure_root_env_is_assigned = true;
 
   } else {
     // Check which lookup method to use and invoke the relevant function.
@@ -246,12 +249,22 @@ const char * rcl_get_secure_root(
       "SECURITY ERROR: unable to find a folder matching the node name in %s%s."
       "Lookup strategy: %s",
       ros_secure_root_env, node_namespace, lookup_strategy);
+    allocator.deallocate(node_secure_root, allocator.state);
+    if (!ros_secure_root_env_is_assigned) {
+      allocator.deallocate(ros_secure_root_env, allocator.state);
+    }
   } else if (!rcutils_is_directory(node_secure_root)) {
     RCL_SET_ERROR_MSG_WITH_FORMAT_STRING(
       "SECURITY ERROR: directory %s does not exist. Lookup strategy: %s",
       node_secure_root, lookup_strategy);
-    allocator->deallocate(node_secure_root, allocator->state);
+    allocator.deallocate(node_secure_root, allocator.state);
+    if (!ros_secure_root_env_is_assigned) {
+      allocator.deallocate(ros_secure_root_env, allocator.state);
+    }
   } else {
+    if (!ros_secure_root_env_is_assigned && ros_secure_root_env != NULL) {
+      allocator.deallocate(ros_secure_root_env, allocator.state);
+    }
     return node_secure_root;
   }
   return NULL;
